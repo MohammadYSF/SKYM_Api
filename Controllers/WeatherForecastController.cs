@@ -4,6 +4,7 @@ using System.Net;
 
 namespace SKYM_Api.Controllers
 {
+
     public class DayEarningReportModel
     {
         public DateTime OrderDate { get; set; }
@@ -21,6 +22,12 @@ namespace SKYM_Api.Controllers
         public int Id { get; set; }
         public string Name { get; set; }
         public string PhoneNumber { get; set; }
+    }
+    public class OrderMenu
+    {
+        public int OrderId { get; set; }
+        public int MenuId { get; set; }
+        public int Count { get; set; }
     }
     public class Menu
     {
@@ -68,8 +75,18 @@ namespace SKYM_Api.Controllers
         public TableStatus Status { get; set; }
         public int Capacity { get; set; }
     }
+    public class StartOrderForNewCustomerRequest
+    {
+        public int CustomerId { get; set; }
+        public string CustomerName { get; set; }
+        public string CustomerPhoneNumber { get; set; }
+        public int OrderType { get; set; }
+        public int WaiterId { get; set; }
+        public int TableId { get; set; }
+        public string address { get; set; } = string.Empty;
+    }
     [ApiController]
-    [Route("[controller]/[action]")]
+    [Route("[action]")]
     public class WeatherForecastController : ControllerBase
     {
 
@@ -80,6 +97,26 @@ namespace SKYM_Api.Controllers
             _connectionString = configuration.GetConnectionString("SKYM_DB");
             _logger = logger;
         }
+        [HttpGet]
+        public async Task<IActionResult> GetAllTables()
+        {
+            List<Table> data = [];
+            using SqlConnection sqlConnection = new(_connectionString);
+            using SqlCommand sqlCommand = new("SELECT * FROM [Table]", sqlConnection);
+            await sqlConnection.OpenAsync();
+            using SqlDataReader reader = sqlCommand.ExecuteReader();
+            while (reader.Read())
+            {
+                data.Add(new Table
+                {
+                    Capacity = (int)reader["capacity"],
+                    Id = (int)reader["id"],
+                    Status = (TableStatus)(int)reader["status"]
+                });
+            }
+            return Ok(data);
+        }
+
 
         [HttpGet]
         public async Task<IActionResult> DayEarningReport()
@@ -200,17 +237,31 @@ namespace SKYM_Api.Controllers
  @order_id int 
 )
          */
-        [HttpPost]
+        //[HttpPost]
 
-        public async Task<IActionResult> UpdateTableStatus(int orderId)
+        //public async Task<IActionResult> UpdateTableStatus(int orderId)
+        //{
+        //    using SqlConnection sqlConnection = new(_connectionString);
+        //    using SqlCommand sqlCommand = new SqlCommand("update_table_status", sqlConnection);
+        //    sqlConnection.Open();
+
+        //    sqlCommand.CommandType = System.Data.CommandType.StoredProcedure;
+        //    sqlCommand.Parameters.AddWithValue("@orderId", orderId);
+        //    sqlConnection.Open();
+        //    await sqlCommand.ExecuteNonQueryAsync();
+        //    return Ok();
+        //}
+
+
+
+        [HttpPost]
+        public async Task<IActionResult> EndOrder(int orderId)
         {
             using SqlConnection sqlConnection = new(_connectionString);
-            using SqlCommand sqlCommand = new SqlCommand("update_table_status", sqlConnection);
-            sqlConnection.Open();
-
+            using SqlCommand sqlCommand = new("end_order", sqlConnection);
             sqlCommand.CommandType = System.Data.CommandType.StoredProcedure;
-            sqlCommand.Parameters.AddWithValue("@orderId", orderId);
-            sqlConnection.Open();
+            sqlCommand.Parameters.AddWithValue("@order_id", orderId);
+            await sqlConnection.OpenAsync();
             await sqlCommand.ExecuteNonQueryAsync();
             return Ok();
         }
@@ -301,10 +352,32 @@ CREATE procedure [dbo].[start_order_for_existing_customer](
 	@count int
          */
         [HttpPost]
+        public async Task<IActionResult> GetOrderMenuItems(int orderId)
+        {
+            List<OrderMenu> data = [];
+            using SqlConnection sqlConnection = new(_connectionString);
+            using SqlCommand sqlCommand = new("SELECT * FROM OrderMenu where orderId=@OrderId", sqlConnection);
+            sqlCommand.Parameters.AddWithValue("@OrderId", orderId);
+            await sqlConnection.OpenAsync();
+
+            using SqlDataReader reader = sqlCommand.ExecuteReader();
+            while (reader.Read())
+            {
+                data.Add(new OrderMenu
+                {
+                    Count = (int)reader["count"],
+                    MenuId = (int)reader["menu_id"],
+                    OrderId = (int)reader["order_id"]
+                });
+            }
+            return Ok(data);
+
+        }
+        [HttpPost]
         public async Task<IActionResult> AddItemToOrder(int orderId, int menuId, int count)
         {
             using SqlConnection sqlConnection = new(_connectionString);
-            using SqlCommand sqlCommand = new SqlCommand("add_item_to_order", sqlConnection);
+            using SqlCommand sqlCommand = new("add_item_to_order", sqlConnection);
             sqlConnection.Open();
 
             sqlCommand.CommandType = System.Data.CommandType.StoredProcedure;
@@ -318,20 +391,17 @@ CREATE procedure [dbo].[start_order_for_existing_customer](
 
 
         [HttpPost]
-        public async Task<IActionResult> StartOrderForNewCustomer(string customerName, string customerPhoneNumber,
-            int orderType, int tableId, int waiter, string? address)
+        public async Task<IActionResult> StartOrderForNewCustomer([FromBody] StartOrderForNewCustomerRequest request)
         {
             using SqlConnection sqlConnection = new(_connectionString);
             using SqlCommand sqlCommand = new SqlCommand("start_order_for_new_customer", sqlConnection);
-            sqlConnection.Open();
-
             sqlCommand.CommandType = System.Data.CommandType.StoredProcedure;
-            sqlCommand.Parameters.AddWithValue("@customerName", customerName);
-            sqlCommand.Parameters.AddWithValue("@customerPhoneNumber", customerPhoneNumber);
-            sqlCommand.Parameters.AddWithValue("@orderType", orderType);
-            sqlCommand.Parameters.AddWithValue("@tableId", tableId);
-            sqlCommand.Parameters.AddWithValue("@waiter", waiter);
-            sqlCommand.Parameters.AddWithValue("@address", address);
+            sqlCommand.Parameters.AddWithValue("@customerName", request.CustomerName);
+            sqlCommand.Parameters.AddWithValue("@customerPhoneNumber", request.CustomerPhoneNumber);
+            sqlCommand.Parameters.AddWithValue("@orderType", request.OrderType);
+            sqlCommand.Parameters.AddWithValue("@table_id", request.TableId);
+            sqlCommand.Parameters.AddWithValue("@waiter", request.WaiterId);
+            sqlCommand.Parameters.AddWithValue("@address", request.address);
             sqlConnection.Open();
             await sqlCommand.ExecuteNonQueryAsync();
             return Ok();
