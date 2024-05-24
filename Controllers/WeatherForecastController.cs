@@ -4,6 +4,18 @@ using System.Net;
 
 namespace SKYM_Api.Controllers
 {
+    public class DayEarningReportModel
+    {
+        public DateTime OrderDate { get; set; }
+        public int Earning { get; set; }
+    }
+    public class TopCustomersReportModel
+    {
+        public int CustomerId { get; set; }
+        public string CustomerName { get; set; }
+        public int CountOfOrders { get; set; }
+        public int CustomerTotalSpending { get; set; }
+    }
     public class Customer
     {
         public int Id { get; set; }
@@ -20,26 +32,26 @@ namespace SKYM_Api.Controllers
     }
     public enum OrderType
     {
-        InPersonCustomerOrder=1,
-        TakeawayCustomerOrder=2,
-        DeliveryCustomerOrder=3
+        InPersonCustomerOrder = 1,
+        TakeawayCustomerOrder = 2,
+        DeliveryCustomerOrder = 3
     }
     public enum TableStatus
     {
-        Free=1,
-        Busy=2
+        Free = 1,
+        Busy = 2
     }
     public enum MenuType
     {
-        Appetizer=1,
-        Entress=2,
-        Desserts=3,
-        Drinks=4,
-        SideDish=5
+        Appetizer = 1,
+        Entress = 2,
+        Desserts = 3,
+        Drinks = 4,
+        SideDish = 5
     }
     public enum StaffType
     {
-        Waiter=1
+        Waiter = 1
     }
     public class Staff
     {
@@ -68,6 +80,48 @@ namespace SKYM_Api.Controllers
             _connectionString = configuration.GetConnectionString("SKYM_DB");
             _logger = logger;
         }
+
+        [HttpGet]
+        public async Task<IActionResult> DayEarningReport()
+        {
+            List<DayEarningReportModel> data = [];
+            using SqlConnection sqlConnection = new(_connectionString);
+            using SqlCommand sqlCommand = new("SELECT * FROM [day_earning_report]", sqlConnection);
+            sqlConnection.Open();
+            using SqlDataReader reader = sqlCommand.ExecuteReader();
+            while (reader.Read())
+            {
+                data.Add(new DayEarningReportModel
+                {
+                    Earning = (int)reader["earning"],
+                    OrderDate = (DateTime)reader["orderDate"]
+                });
+            }
+            return Ok(data);
+        }
+        [HttpGet]
+        public async Task<IActionResult> TopCustomersReport()
+        {
+            List<TopCustomersReportModel> data = [];
+            using SqlConnection sqlConnection = new(_connectionString);
+            using SqlCommand sqlCommand = new("SELECT * FROM [top_customers_report]", sqlConnection);
+            sqlConnection.Open();
+            using SqlDataReader reader = sqlCommand.ExecuteReader();
+            while (reader.Read())
+            {
+                data.Add(new TopCustomersReportModel
+                {
+                    CustomerId = (int)reader["customer_id"],
+                    CustomerName = reader["customer_name"].ToString(),
+                    CountOfOrders = (int)reader["count_of_orders"],
+                    CustomerTotalSpending = (int)reader["customer_total_spending"],
+
+                });
+            }
+            return Ok(data);
+        }
+
+
         [HttpGet]
         public async Task<IActionResult> GetMenus()
         {
