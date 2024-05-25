@@ -60,6 +60,15 @@ namespace SKYM_Api.Controllers
     {
         Waiter = 1
     }
+    public class TodayOrder
+    {
+        public DateTime OrderDate { get; set; }
+        public OrderType OrderType { get; set; }
+        public bool IsOrderFinished { get; set; }
+        public int OrderId { get; set; }
+        public string CustomerName { get; set; }
+    }
+
     public class Staff
     {
         public int Id { get; set; }
@@ -89,7 +98,11 @@ namespace SKYM_Api.Controllers
     [Route("[action]")]
     public class WeatherForecastController : ControllerBase
     {
-
+        private bool IsTheSameDay(DateTime date1, DateTime date2)
+        {
+            var x = (date1.Year == date2.Year && date1.DayOfYear == date2.DayOfYear);
+            return x;
+        }
         private readonly ILogger<WeatherForecastController> _logger;
         private readonly string _connectionString;
         public WeatherForecastController(ILogger<WeatherForecastController> logger, IConfiguration configuration)
@@ -118,6 +131,7 @@ namespace SKYM_Api.Controllers
         }
 
 
+
         [HttpGet]
         public async Task<IActionResult> DayEarningReport()
         {
@@ -135,6 +149,55 @@ namespace SKYM_Api.Controllers
                 });
             }
             return Ok(data);
+        }
+        [HttpGet]
+        public async Task<IActionResult> TodayOrders()
+        {
+            List<TodayOrder> data = [];
+            using SqlConnection sqlConnection = new(_connectionString);
+            string query = """
+                SELECT 
+                [Order].[id] as orderId,
+                [Order].[Finished] as isOrderFinished,
+                [Order].orderDate as orderDate,
+                [Customer].[name] as customerName,
+                1 as orderType
+                FROM [Order] inner join InPersonOrderCustomer on [Order].[id]=[InPersonOrderCustomer].order_id inner join Customer on [InPersonOrderCustomer].customer_id=[Customer].id
+                union
+                SELECT 
+                [Order].[id] as orderId,
+                [Order].[Finished] as isOrderFinished,
+                [Order].orderDate as orderDate,                
+                [Customer].[name] as customerName,
+                2 as orderType                
+                FROM [Order] inner join DeliveryCustomer on [Order].[id]=[DeliveryCustomer].order_id inner join Customer on [DeliveryCustomer].customer_id=[Customer].id                
+                union
+                SELECT 
+                [Order].[id] as orderId,
+                [Order].[Finished] as isOrderFinished,
+                [Order].orderDate as orderDate,                
+                [Customer].[name] as customerName,
+                3 as orderType
+                FROM [Order] inner join TakeAwayCustomer on [Order].[id]=[TakeAwayCustomer].order_id inner join Customer on [TakeAwayCustomer].customer_id=[Customer].id                                
+                """;
+            using SqlCommand sqlCommand = new(query, sqlConnection);
+            sqlConnection.Open();
+            using SqlDataReader reader = sqlCommand.ExecuteReader();
+            while (reader.Read())
+            {
+                data.Add(new TodayOrder
+                {
+                    OrderId = (int)reader["orderId"],
+                    CustomerName = reader["customerName"].ToString(),
+                    OrderType = (OrderType)(int)reader["orderType"],
+                    IsOrderFinished = (bool)reader["isOrderFinished"],
+                    OrderDate = (DateTime)reader["orderDate"]
+                });
+            }
+            var ans = data
+                .Where(a => this.IsTheSameDay(DateTime.Now, a.OrderDate))
+                .ToList();
+            return Ok(ans);
         }
         [HttpGet]
         public async Task<IActionResult> TopCustomersReport()
@@ -175,6 +238,7 @@ namespace SKYM_Api.Controllers
                     Name = reader["name"].ToString(),
                     Count = (int)reader["count"],
                     Price = (int)reader["price"],
+                    Type = (MenuType)(int)reader["type"]
                 });
             }
             return Ok(menus);
@@ -351,12 +415,12 @@ CREATE procedure [dbo].[start_order_for_existing_customer](
 	@menu_id int,
 	@count int
          */
-        [HttpPost]
+        [HttpGet]
         public async Task<IActionResult> GetOrderMenuItems(int orderId)
         {
             List<OrderMenu> data = [];
             using SqlConnection sqlConnection = new(_connectionString);
-            using SqlCommand sqlCommand = new("SELECT * FROM OrderMenu where orderId=@OrderId", sqlConnection);
+            using SqlCommand sqlCommand = new("SELECT * FROM OrderMenu where order_id=@OrderId", sqlConnection);
             sqlCommand.Parameters.AddWithValue("@OrderId", orderId);
             await sqlConnection.OpenAsync();
 
