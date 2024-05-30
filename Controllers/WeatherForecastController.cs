@@ -195,7 +195,7 @@ public class WeatherForecastController : ControllerBase
             });
         }
         var ans = data
-            .Where(a => this.IsTheSameDay(DateTime.Now, a.OrderDate))
+            //.Where(a => this.IsTheSameDay(DateTime.Now, a.OrderDate))
             .ToList();
         return Ok(ans);
     }
@@ -399,6 +399,7 @@ CREATE procedure [dbo].[start_order_for_existing_customer](
         sqlCommand.Parameters.AddWithValue("@waiter", waiter);
         sqlCommand.Parameters.AddWithValue("@orderType", (int)orderType);
         sqlCommand.Parameters.AddWithValue("@address", address);
+        sqlCommand.Parameters.AddWithValue("@orderDate", DateTime.UtcNow);
         sqlConnection.Open();
         await sqlCommand.ExecuteNonQueryAsync();
         return Ok();
@@ -445,10 +446,9 @@ CREATE procedure [dbo].[start_order_for_existing_customer](
         sqlConnection.Open();
 
         sqlCommand.CommandType = System.Data.CommandType.StoredProcedure;
-        sqlCommand.Parameters.AddWithValue("@orderId", orderId);
-        sqlCommand.Parameters.AddWithValue("@menuId", menuId);
+        sqlCommand.Parameters.AddWithValue("@order_id", orderId);
+        sqlCommand.Parameters.AddWithValue("@menu_id", menuId);
         sqlCommand.Parameters.AddWithValue("@count", count);
-        sqlConnection.Open();
         await sqlCommand.ExecuteNonQueryAsync();
         return Ok();
     }
@@ -466,6 +466,7 @@ CREATE procedure [dbo].[start_order_for_existing_customer](
         sqlCommand.Parameters.AddWithValue("@table_id", request.TableId);
         sqlCommand.Parameters.AddWithValue("@waiter", request.WaiterId);
         sqlCommand.Parameters.AddWithValue("@address", request.address);
+        sqlCommand.Parameters.AddWithValue("@orderDate", DateTime.UtcNow);
         sqlConnection.Open();
         await sqlCommand.ExecuteNonQueryAsync();
         return Ok();
