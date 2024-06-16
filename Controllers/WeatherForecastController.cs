@@ -3,6 +3,21 @@ using Microsoft.Data.SqlClient;
 
 namespace SKYM_Api.Controllers;
 
+public class OrderLog
+{
+    public int Id { get; set; }
+    public int OrderId { get; set; }
+    public DateTime HappeningDateTime { get; set; }
+    public string Username { get; set; }
+    public string Description { get; set; }
+    public OrderLogOperationType Type { get; set; }
+}
+public enum OrderLogOperationType
+{
+    NewRecord = 1,
+    DeleteRecord = 2,
+    UpdateRecord = 3
+}
 
 public class DayEarningReportModel
 {
@@ -485,5 +500,32 @@ CREATE procedure [dbo].[start_order_for_existing_customer](
 	@waiter int,
 	@address nvarchar(255) --@address will be used in the case when @orderType is delivery
          */
+    }
+
+
+
+    [HttpGet]
+    public async Task<IActionResult> GetOrderLogData()
+    {
+        List<OrderLog> data = [];
+        using SqlConnection sqlConnection = new(_connectionString);
+        using SqlCommand sqlCommand = new("SELECT * FROM OrderLog;", sqlConnection);
+        await sqlConnection.OpenAsync();
+
+        using SqlDataReader reader = sqlCommand.ExecuteReader();
+        while (reader.Read())
+        {
+            data.Add(new OrderLog
+            {
+                Description = reader["description"].ToString(),
+                HappeningDateTime = (DateTime)reader["happeningDateTime"],
+                Id = (int)reader["log_id"],
+                OrderId = (int)reader["order_id"],
+                Type = (OrderLogOperationType)reader["type"],
+                Username = reader["username"].ToString()
+            });
+        }
+        return Ok(data);
+
     }
 }

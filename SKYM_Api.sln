@@ -5,7 +5,7 @@ VisualStudioVersion = 17.9.34622.214
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SKYM_Api", "SKYM_Api.csproj", "{4AFEE395-272D-47C2-9447-3647B5BC538A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SKYM-Blazor", "..\SKYM-Blazor\SKYM-Blazor.csproj", "{55E5334F-518F-43C5-882F-5787F1880B90}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SKYM-Blazor", "..\SKYM-Blazor\SKYM-Blazor.csproj", "{55E5334F-518F-43C5-882F-5787F1880B90}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
