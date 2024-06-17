@@ -9,7 +9,7 @@ public class OrderLog
     public int OrderId { get; set; }
     public DateTime HappeningDateTime { get; set; }
     public string Username { get; set; }
-    public string Description { get; set; }
+    public string? Description { get; set; }
     public OrderLogOperationType Type { get; set; }
 }
 public enum OrderLogOperationType
@@ -517,11 +517,11 @@ CREATE procedure [dbo].[start_order_for_existing_customer](
         {
             data.Add(new OrderLog
             {
-                Description = reader["description"].ToString(),
+                Description = reader["description"].ToString(), 
                 HappeningDateTime = (DateTime)reader["happeningDateTime"],
                 Id = (int)reader["log_id"],
                 OrderId = (int)reader["order_id"],
-                Type = (OrderLogOperationType)reader["type"],
+                Type = (OrderLogOperationType)(int)reader["type"],
                 Username = reader["username"].ToString()
             });
         }
